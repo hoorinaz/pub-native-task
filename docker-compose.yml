@@ -1,0 +1,75 @@
+version: '3.3'
+
+services:
+  db:
+    image: postgres:11.8
+    ports:
+    - '5432:5432'
+    restart: always
+    env_file:
+      - .env
+
+  migration:
+    image: amacneil/dbmate
+    restart: on-failure
+    volumes:
+      - ./schema:/db
+    command: up
+    depends_on:
+      - db
+    env_file:
+      - .env
+
+  allinone:
+    image: golang:1.14.2
+    volumes:
+      - .:/go/src/github.com/hoorinaz/pub-native-task
+    ports:
+      - "1321:1321"
+    working_dir: /go/src/github.com/hoorinaz/pub-native-task
+    environment:
+      GO111MODULE: "on"
+    env_file:
+      - .env
+    command: go run cmd/all/main.go
+    depends_on:
+      - db
+      - migration
+    links:
+      - db
+    restart: always
+
+  api:
+    image: golang:1.14.2
+    volumes:
+      - .:/go/src/github.com/hoorinaz/pub-native-task
+    ports:
+      - "1321:1321"
+    working_dir: /go/src/github.com/hoorinaz/pub-native-task
+    environment:
+      GO111MODULE: "on"
+    env_file:
+      - .env
+    command: go run cmd/promotionsapi/main.go
+    depends_on:
+      - db
+      - migration
+    links:
+      - db
+    restart: always
+
+  csv:
+    image: golang:1.14.2
+    volumes:
+      - .:/go/src/github.com/hoorinaz/pub-native-task
+    working_dir: /go/src/github.com/hoorinaz/pub-native-task
+    environment:
+      GO111MODULE: "on"
+    env_file:
+      - .env
+    command: go run cmd/promotionscsv/main.go
+    depends_on:
+      - db
+      - migration
+    links:
+      - db
